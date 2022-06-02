@@ -7,10 +7,6 @@ import os
 from os import listdir
 from sklearn.model_selection import train_test_split
 import sklearn
-from tensorflow import keras
-from tensorflow.keras import layers
-import sklearn
-from sklearn.model_selection import StratifiedGroupKFold
 from keras_preprocessing.image import ImageDataGenerator
 from random import random
 import matplotlib.pyplot  as plt
@@ -22,55 +18,23 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import confusion_matrix
 from sklearn.metrics import balanced_accuracy_score
 
-path_scans=''
-path_scans_test=''
-path_excel=''
-path_excel_test=''
+from util_functions import process_scan
 
-###############
-## FUNCTIONS ##
-###############
+path_scans='/mnt/Bessel/Gproj/Gerard_DATA/FAT-SAT/TRIO'
+path_excel='/mnt/Bessel/Gproj/Gerard_DATA/FAT-SAT/new_lesion2.xlsx'
 
-def read_nifti_file(filepath):
-    """Read and load volume"""
-    # Read file
-    scan = nib.load(filepath)
-    # Get raw data
-    scan = scan.get_fdata()
-    return scan
+path_scans_test='/mnt/Bessel/Gproj/Gerard_DATA/FAT-SAT/PRISMA'
+path_excel_test='/mnt/Bessel/Gproj/Gerard_DATA/FAT-SAT/test_labels.ods'
 
+# type of model
+model_name = "SVM" # Either SVM or RF
+out_dir = f"/mnt/Bessel/Gproj/Gerard_DATA/FAT-SAT/{model_name}_results"
 
-def normalize(volume):
-    """Normalize the volume"""
-    min = np.amin(volume) # HARDCODED ( need to change )
-    max = np.amax(volume) # HARDCODED ( need to change )
-    #volume[volume < min] = min
-    #volume[volume > max] = max
-    volume = (volume - min) / (max - min)
-    volume = volume.astype("float32")
-    return volume
-
-def normalize_mean(volume):
-    mean = np.average(volume)
-    std = np.std(volume)
-    volume = (volume - mean) / std
-    volume = volume.astype("float32")
-    return volume
-
-def process_scan(path):
-    """Read and resize volume"""
-    # Read scan
-    volume = read_nifti_file(path)
-    # Normalize
-    #volume = normalize(volume)
-    volume = normalize_mean(volume)
-    # Resize width, height and depth
-    # volume = resize_volume(volume)
-    return volume
-
-SVM_algorithm=False
-RF_algorithm=True
-
+## BEST PARAMS (from validation)
+if model_name == "SVM":
+    params = {}
+else:
+    params = {}
 ###################
 #### read excel ###
 ###################
@@ -132,8 +96,8 @@ labels=[]
 for infile in tqdm(listdir(path_scans)):
     ids_scans.append(infile+'_l')
     ids_scans.append(infile+'_r')
-    scans.append(process_scan(path_scans+infile+'/Eye_n4_{}_T2FastSat_crop_Left_flipped.nii'.format(infile)))
-    scans.append(process_scan(path_scans+infile+'/Eye_n4_{}_T2FastSat_crop_Right.nii'.format(infile)))
+    scans.append(process_scan(f'{path_scans}/{infile}', 'n4_{}_T2FastSat_crop_Left_flipped.nii'.format(infile)))
+    scans.append(process_scan(f'{path_scans}/{infile}', 'n4_{}_T2FastSat_crop_Right.nii'.format(infile)))
 
     position=ids_excel.index(infile)
     labels.append(label_left[position])
@@ -148,17 +112,14 @@ y_test=[]
 for infile in tqdm(listdir(path_scans_test)):
     ids_scans_test.append(infile+'_l')
     ids_scans_test.append(infile+'_r')
-    x_test.append(process_scan(path_scans_test+infile+'/Eye_n4_{}_T2FastSat_crop_Left_flipped.nii'.format(infile)))
-    x_test.append(process_scan(path_scans_test+infile+'/Eye_n4_{}_T2FastSat_crop_Right.nii'.format(infile)))
+    x_test.append(process_scan(f'{path_scans_test}/{infile}', 'n4_{}_T2FastSat_crop_Left_flipped.nii'.format(infile)))
+    x_test.append(process_scan(f'{path_scans_test}/{infile}', 'n4_{}_T2FastSat_crop_Right.nii'.format(infile)))
 
     position=ids_excel_test.index(infile)
     y_test.append(label_left_test[position])
     y_test.append(label_right_test[position])
 
 print(y_test)
-#################
-# CNN STRUCTURE #
-#################
 
 #Loop for performing different permutations and do an average of the results
 accuracy=[]
@@ -221,39 +182,43 @@ for p in tqdm(range(iterations)):
 
     
     x_train_svm=[]
+    y_train_svm=[]
+
     for i in range(len(x_train)):
-        x_train_svm.append(x_train[i].ravel())
+        for j in range(len(x_train[i])):
+            x_train_svm.append(x_train[i][j].ravel())
+            y_train_svm.append(y_train[i])
 
     x_test_svm=[]
     for i in range(len(x_test)):
-        x_test_svm.append(x_test[i].ravel())
+        x_test_svm.append(x_test[i][0].ravel())
 
     #convert to float
     x_train_svm=np.asarray(x_train_svm,dtype=np.float32)
     x_test_svm=np.asarray(x_test_svm,dtype=np.float32)
-    y_train=np.asarray(y_train,dtype=np.float32)
+    y_train=np.asarray(y_train_svm,dtype=np.float32)
     y_test=np.asarray(y_test,dtype=np.float32)
 
     print(len(x_train_svm))
     print(len(x_test_svm))
 
-    if SVM_algorithm==True:
+    if model_name == "SVM":
         clf = SVC()
+        clf.set_params(params) # set the parameters
         clf.fit(x_train_svm, y_train)
         acc=clf.score(x_test_svm,y_test)
         prediction=clf.predict(x_test_svm)
         acc_bal=balanced_accuracy_score(y_test,prediction)
         tn,fp,fn,tp=confusion_matrix(y_test,prediction).ravel()
-        #a=confusion_matrix(y_test,prediction)
-        #print(a)
-
-    if RF_algorithm==True:
+    else:
         clf = RandomForestClassifier()
+        clf.set_params(params) # set the parameters
         clf.fit(x_train_svm, y_train)
         acc=clf.score(x_test_svm,y_test)
         prediction=clf.predict(x_test_svm)
         acc_bal=balanced_accuracy_score(y_test,prediction)
         tn,fp,fn,tp=confusion_matrix(y_test,prediction).ravel()
+
 
 
     #####################

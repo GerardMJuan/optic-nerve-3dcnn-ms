@@ -10,63 +10,26 @@ import sklearn
 from tensorflow import keras
 from tensorflow.keras import layers
 import sklearn
-from sklearn.model_selection import StratifiedGroupKFold
 from keras_preprocessing.image import ImageDataGenerator
 from random import random
 import matplotlib.pyplot  as plt
 import random
 
+from util_functions import process_scan
 
-path_scans=''
-path_excel=''
+path_scans='/mnt/Bessel/Gproj/Gerard_DATA/FAT-SAT/TRIO'
+path_excel='/mnt/Bessel/Gproj/Gerard_DATA/FAT-SAT/new_lesion2.xlsx'
 
-###############
-## FUNCTIONS ##
-###############
-
-def read_nifti_file(filepath):
-    """Read and load volume"""
-    # Read file
-    scan = nib.load(filepath)
-    # Get raw data
-    scan = scan.get_fdata()
-    return scan
-
-
-def normalize(volume):
-    """Normalize the volume"""
-    min = np.amin(volume) # HARDCODED ( need to change )
-    max = np.amax(volume) # HARDCODED ( need to change )
-    #volume[volume < min] = min
-    #volume[volume > max] = max
-    volume = (volume - min) / (max - min)
-    volume = volume.astype("float32")
-    return volume
-
-def normalize_mean(volume):
-    mean = np.average(volume)
-    std = np.std(volume)
-    volume = (volume - mean) / std
-    volume = volume.astype("float32")
-    return volume
-
-def process_scan(path):
-    """Read and resize volume"""
-    # Read scan
-    volume = read_nifti_file(path)
-    # Normalize
-    #volume = normalize(volume)
-    volume = normalize_mean(volume)
-    # Resize width, height and depth
-    # volume = resize_volume(volume)
-    return volume
+out_dir = "/mnt/Bessel/Gproj/Gerard_DATA/FAT-SAT/TRIO_results"
 
 def train_preprocessing(volume, label):
     volume = tf.expand_dims(volume, axis=3)
-    
     return volume, label
 
 def validation_preprocessing(volume, label):
+    """
+    Need to select first scan, the original one
+    """
     volume = tf.expand_dims(volume, axis=3)
     
     return volume, label
@@ -75,15 +38,41 @@ def validation_preprocessing(volume, label):
 def data_aug(volume, label):
 #noise
     noise = np.random.normal(0,0.05,(40,31,13))
-    noise=np.asarray(noise,dtype=np.float32)
+    noise= np.asarray(noise,dtype=np.float32)
     noise = tf.convert_to_tensor(noise)
     noise = tf.expand_dims(noise, axis=3)  
-
     r = random.random()
     if r<0.5:
         volume = volume + noise
     return volume,label
 
+def data_aug_select_vol(volume, label):
+    """
+    This function selects, at compute time, a random volume from the available volumes.
+
+    It is a combination of offline and online data augmentation, just having the slices precomputed.
+    It selects a random slice each time.
+
+    This means that we need to load all the slices in a dictionary, in the other files.
+    
+    It needs to go before the train_preprocessing values
+    """
+    # select a random one
+    idx = np.random.choice(volume.shape[0])
+    volume = volume[idx]
+    return volume, label
+
+
+def select_vol_validation(volume, label):
+    """
+    Same as before but without data validation
+
+    selecting always the same volume
+    
+    """
+    # select a random one
+    volume = volume[0]
+    return volume, label
 
 
 ###################
@@ -102,18 +91,18 @@ for row in info.itertuples():
     ids_excel.append(str(row[1]))
     left=row[2]
     if left=='Y':
-        label_left.append(np.float(1))
+        label_left.append(float(1))
         ulls_lesio+=1
     else:
-        label_left.append(np.float(0))
+        label_left.append(float(0))
         ulls_nolesio+=1
 
     right=row[3]
     if right=='Y':
-        label_right.append(np.float(1))
+        label_right.append(float(1))
         ulls_lesio+=1
     else:
-        label_right.append(np.float(0))
+        label_right.append(float(0))
         ulls_nolesio+=1
     
     if left=='N' and right=='N':
@@ -121,9 +110,6 @@ for row in info.itertuples():
 print('Amount of eyes with lesions in dataset = ', str(ulls_lesio)) #72
 print('Amount of eyes with no lesions in dataset = ', str(ulls_nolesio)) #142
 print('Amount of patients with no lesions in dataset = ', str(pacient_neg))
-
-
-
 
 ################
 ## Load scans ##
@@ -140,8 +126,8 @@ cont=1
 for infile in tqdm(listdir(path_scans)):
     ids_scans_l.append(infile+'_l')
     ids_scans_r.append(infile+'_r')
-    scans_l.append(process_scan(path_scans+infile+'/Eye_n4_{}_T2FastSat_crop_Left_flipped.nii'.format(infile)))
-    scans_r.append(process_scan(path_scans+infile+'/Eye_n4_{}_T2FastSat_crop_Right.nii'.format(infile)))
+    scans_l.append(process_scan(f'{path_scans}/{infile}', 'n4_{}_T2FastSat_crop_Left_flipped.nii'.format(infile)))
+    scans_r.append(process_scan(f'{path_scans}/{infile}', 'n4_{}_T2FastSat_crop_Right.nii'.format(infile)))
 
     position=ids_excel.index(infile)
     labels_l.append(label_left[position])
@@ -179,7 +165,7 @@ precisionfalse_permu=[]
 specificity_permu=[]
 
 
-iterations=200
+iterations=1
 for p in tqdm(range(iterations)):
 
     pos2_scans=[]
@@ -321,10 +307,6 @@ for p in tqdm(range(iterations)):
     ids_xval=ids_val2
     #import pdb; 
     #pdb.set_trace()
-
-
-
-
   
     ####################
     ## STRATIFICATION ##
@@ -373,7 +355,7 @@ for p in tqdm(range(iterations)):
     print('Number of no-lesion scans in training dataset', nolesio)
 
     #SELECT A SUBSAMPLING OF NEGATIVE CASES TO MATCH POSITIVE SIZE
-
+    ### SUBSAMPLING IS DONE HERE
     ids_xtrain_nolesion_selection=random.sample(ids_xtrain_nolesion,lesio)
     ids_xtrain_list=list(ids_xtrain)
 
@@ -422,12 +404,11 @@ for p in tqdm(range(iterations)):
 
 
     #convert to float
+    # TODO: POSSIBLE NEEDS TO BE CHANGED, given that X now is a list of lists
     x_train=np.asarray(x_train,dtype=np.float32)
     x_val=np.asarray(x_val,dtype=np.float32)
     y_train=np.asarray(y_train,dtype=np.float32)
     y_val=np.asarray(y_val,dtype=np.float32)
-
-
 
     # Define data loaders.
     train_loader = tf.data.Dataset.from_tensor_slices((x_train, y_train))
@@ -437,8 +418,10 @@ for p in tqdm(range(iterations)):
     batch_size = 16
 
     # Augment the on the fly during training.
+    # add a mapping to the new function
     train_dataset = (
         train_loader.shuffle(len(x_train))
+        .map(data_aug_select_vol)
         .map(train_preprocessing)
         .map(data_aug)
         #.map(py_augment)
@@ -450,6 +433,7 @@ for p in tqdm(range(iterations)):
     # Only rescale.
     validation_dataset = (
         validation_loader.shuffle(len(x_val))
+        .map(select_vol_validation)
         .map(validation_preprocessing)
         .batch(batch_size)
         .prefetch(2)
@@ -513,10 +497,10 @@ for p in tqdm(range(iterations)):
     #plt.plot(history.history['val_acc'])
     plt.legend(['Train loss', 'Val loss'])#, 'Train acc', 'Val acc'])
     plt.title('Metrics results')
-    plt.savefig('metric_plots/plot_{}.png'.format(p))
+    plt.savefig(f'{out_dir}/metric_plots/plot_{p}.png')
     plt.close()
 
-    model.save('models/model_{}.h5'.format(p))
+    model.save(f'{out_dir}/models/model_{p}.h5')
 
 
     #model.load_weights("3d_image_classification.h5")
@@ -525,11 +509,14 @@ for p in tqdm(range(iterations)):
     ## METRICS RESULTS ##
     #####################
  
+    # WHICH METRICS DO I NEED?
+    # Need to output the probabilities , but not for the training, right?
+
     tp=[]
     fp=[]
     tn=[]
     fn=[]
-    loss_list=[]
+    loss_list=[] ### NEEDS TO BE SAVED, AS WITH THIS WE WILL DO THE AUC
     x_te=x_val
     y_te=y_val
 
@@ -541,9 +528,10 @@ for p in tqdm(range(iterations)):
     y_r_list=[]
 
     for i in range(len(x_te)):
-        images = np.expand_dims(x_te[i], axis=-1)
-        images = tf.Variable(np.expand_dims(images, axis=0))
-
+        # NO NEED TO COMPUTE GRADIENTS AGAIN, AT LEAST FOR NOW
+        # TODO: COMMENT
+        images = np.expand_dims(x_te[i][0], axis=-1)
+        images = tf.Variable(np.expand_dims(images, axis=0).astype('float32'))
         with tf.GradientTape() as tape:
             pred = model(images, training=False)
             # class_idws_sorted = np.argsort(pred.numpy().flatten())[::-1]
@@ -556,7 +544,6 @@ for p in tqdm(range(iterations)):
 
         arr_min,arr_max = np.min(dgrad_abs),np.max(dgrad_abs)
         grad_eval = (dgrad_abs - arr_min)/(arr_max-arr_min+1e-18) # THIS is saliency map
-
         y_p=loss[0]
         y_p_list.append(np.around(y_p))
         y_r=y_te[i]
@@ -625,6 +612,8 @@ id_scan_tp,id_scan_tn,id_scan_fp,id_scan_fn=[ids_tp_sm[maxpos],ids_tn_sm[maxpos]
 
 
 #delete previous scans because each time it changes
+# ALSO POSSIBLE TO JUST REMOVE THIS
+"""
 import os
 import glob
 #save saliency maps of individual scans
@@ -632,7 +621,9 @@ general_scans=[tp,tn,fp,fn]
 general_names=['tp','tn','fp','fn']
 general_ids=[id_scan_tp,id_scan_tn,id_scan_fp,id_scan_fn]
 for i in range(4):
-    path='saliency maps/{}'.format(general_names[i])
+    path=f'{out_dir}/saliency_maps/{general_names[i]}'
+    if not os.path.exists(path):
+        os.makedirs(path)
     for filename in os.listdir(path):
         f = os.path.join(path, filename)
         os.remove(f)
@@ -646,8 +637,8 @@ for i in range(4):
             scan_ex = nib.load(path_scans+id_value+'/Eye_n4_{}_T2FastSat_crop_Left_flipped.nii'.format(id_value,))
 
         img=nib.Nifti1Image(general_scans[i][j].numpy().squeeze(),scan_ex.affine,scan_ex.header)
-        nib.save(img,'saliency maps/{}/{}.nii.gz'.format(general_names[i],str(general_ids[i][j])+'_smap'))
-
+        nib.save(img, f'{out_dir}/saliency_maps/{general_names[i]}/{general_ids[i][j]}_smap.nii.gz')
+"""
 
 accuracy_av=sum(accuracy)/iterations
 acc_av_std=np.std(accuracy)
@@ -697,7 +688,7 @@ print('Specificity std = ' + str(specificity_std))
 
 import csv
 
-with open('results_train.csv', 'w', newline='') as file:
+with open(f'{out_dir}/results_train.csv', 'w', newline='') as file:
     writer = csv.writer(file)
     writer.writerow(['Permutation', 'Accuracy', 'Accuracy Balanced', 'Recall', 'Precision Negative', 'Precision Positive', 'Specificity'])
     for i in range(iterations):

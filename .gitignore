@@ -127,3 +127,4 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+3d_image_classification.h5
