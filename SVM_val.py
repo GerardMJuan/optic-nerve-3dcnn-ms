@@ -80,7 +80,7 @@ for infile in tqdm(listdir(path_scans)):
 #################
 
 # type of model
-model_name = "SVM" # Either SVM or RF
+model_name = "RF" # Either SVM or RF
 out_dir = "/mnt/Bessel/Gproj/Gerard_DATA/FAT-SAT/results"
 
 # create dataframe where we will store the results
@@ -89,8 +89,8 @@ out_dir = "/mnt/Bessel/Gproj/Gerard_DATA/FAT-SAT/results"
 # Create grid of parameters for each tal
 
 if model_name == "SVM":
-    grid = [{'kernel': ['linear'], 'C': [0.1, 1, 10], 'gamma': ['scale']}, {'kernel': ['rbf'], 'gamma': ['scale', 'auto'], 'C': [0.1, 1, 10]}, {'kernel': ['sigmoid'], 'gamma': ['scale', 'auto'], 'C': [0.1, 1, 10]}] 
-    
+    grid = [{'kernel': ['linear'], 'C': [0.1, 1, 10], 'gamma': ['scale']}, {'kernel': ['rbf'], 'gamma': ['scale', 'auto'], 'C': [0.1, 1, 10]}, {'kernel': ['sigmoid'], 'gamma': ['scale', 'auto'], 'C': [0.1, 1, 10]}]
+
     df_results = {'kernel': [],
                   'gamma': [],
                   'C': [],
@@ -111,7 +111,7 @@ else:
              'max_features': ['auto', 'log2'],
              'min_samples_leaf': [2, 4, 8, 20],
              'min_samples_split': [0.5, 2, 5, 10],
-             'n_estimators': [100, 200, 500]}]
+             'n_estimators': [100, 200]}]
 
     df_results = {'criterion': [],
                   'max_features': [],
@@ -221,7 +221,7 @@ for params in grid_params:
         train_selection2=selection2[0]
         val_selection2=selection2[-1]
 
-        
+
         x_train.append(pos2_scans[train_selection2])
         y_train.append(pos2_labels[train_selection2])
         ids_train.append(pos2_ids[train_selection2])
@@ -339,7 +339,7 @@ for params in grid_params:
         y_train=np.concatenate([y_train_lesion,y_train_nolesion_selection], axis=0)
         ids_x_train=np.concatenate([ids_xtrain_lesion,ids_xtrain_nolesion_selection], axis=0)
 
-        
+
         x_train_svm=[]
         y_train_svm=[]
         for i in range(len(x_train)):
@@ -469,4 +469,3 @@ for params in grid_params:
 # save df_results to disk
 df_results = pd.DataFrame(df_results)
 df_results.to_csv(f'{out_dir}/{model_name}_CV.csv', index=False)
-
