@@ -1,3 +1,4 @@
+from inspect import stack
 import numpy as np
 import tensorflow as tf
 import nibabel as nib
@@ -134,6 +135,8 @@ precisiontrue_permu=[]
 precisionfalse_permu=[]
 specificity_permu=[]
 
+stack_loss_list=[]
+
 iterations=200
 for p in tqdm(range(iterations)):
 
@@ -206,6 +209,7 @@ for p in tqdm(range(iterations)):
         clf = SVC()
         clf.set_params(params) # set the parameters
         clf.fit(x_train_svm, y_train)
+        loss_list = clf.predict_proba(x_test_svm)[:, 1]
         acc=clf.score(x_test_svm,y_test)
         prediction=clf.predict(x_test_svm)
         acc_bal=balanced_accuracy_score(y_test,prediction)
@@ -214,12 +218,13 @@ for p in tqdm(range(iterations)):
         clf = RandomForestClassifier()
         clf.set_params(params) # set the parameters
         clf.fit(x_train_svm, y_train)
+        loss_list = clf.predict_proba(x_test_svm)[:, 1]
         acc=clf.score(x_test_svm,y_test)
         prediction=clf.predict(x_test_svm)
         acc_bal=balanced_accuracy_score(y_test,prediction)
         tn,fp,fn,tp=confusion_matrix(y_test,prediction).ravel()
 
-
+    stack_loss_list.append(loss_list)
 
     #####################
     ## METRICS RESULTS ##
@@ -242,10 +247,6 @@ for p in tqdm(range(iterations)):
     tn_permu.append(tn)
     fp_permu.append(fp)
     fn_permu.append(fn)
-
-
-
-
 
 accuracy_av=sum(accuracy)/iterations
 acc_av_std=np.std(accuracy)
@@ -289,6 +290,34 @@ print('Precision true std = ' + str(precisiontrue_std))
 print('Specificity average = ' + str(specificity_av))
 print('Specificity std = ' + str(specificity_std))
 
+########################
+## SAVE EXCEL METRICS ##
+########################
 
+import csv
 
+with open(f'{out_dir}/results_test.csv', 'w', newline='') as file:
+    writer = csv.writer(file)
+    writer.writerow(['Permutation', 'Accuracy', 'Accuracy Balanced', 'Recall', 'Precision Negative', 'Precision Positive', 'Specificity'])
+    for i in range(iterations):
+        writer.writerow([i,accuracy[i],accuracy_bal[i], recall_permu[i],precisionfalse_permu[i],precisiontrue_permu[i],specificity_permu[i]])
 
+########################
+## Save loss list    ##
+# (And create AUC)   ##
+########################
+
+# ha de ser un csv ammb unfo del true label, les probabilitats i si es possible,
+# el nom( tot i que no es obligatori),
+
+# average loss list?
+avg_prob_list = np.mean(stack_loss_list, axis=0)
+
+dict_results = {
+    "prob": avg_prob_list,
+    "true_label": y_test,
+    "id": ids_scans_test
+} 
+df_results = pd.DataFrame(dict_results)
+df_results.to_csv(f'{out_dir}/output_probabilities.csv', index=False)
+# OPEN PROBLEM: HOW TO combine results for each?

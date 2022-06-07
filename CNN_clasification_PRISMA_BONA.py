@@ -191,6 +191,8 @@ precisiontrue_permu=[]
 precisionfalse_permu=[]
 specificity_permu=[]
 
+stack_loss_list = []
+
 iterations=200
 for p in tqdm(range(iterations)):
 
@@ -410,7 +412,9 @@ for p in tqdm(range(iterations)):
         elif y_te[i]!=np.around(loss)[0] and y_te[i]==1.0: #fn
             fn.append(grad_eval)
             id_scan_fn.append(ids_scans_test[i])
-        
+    
+    stack_loss_list.append(loss_list)
+
     print('True positives',len(tp))
     print('True negatives', len(tn))
     print('False positives',len(fp))
@@ -540,15 +544,18 @@ with open(f'{out_dir}/results_test.csv', 'w', newline='') as file:
         writer.writerow([i,accuracy[i],accuracy_bal[i], recall_permu[i],precisionfalse_permu[i],precisiontrue_permu[i],specificity_permu[i]])
 
 ########################
-## Save loss list    ##
-# (And create AUC)   ##
+##   Save loss list    ### 
+##  (And create AUC)   ###
 ########################
 
 # ha de ser un csv ammb unfo del true label, les probabilitats i si es possible,
 # el nom( tot i que no es obligatori),
-# loss list needs to be averaged? or what?
+
+# average loss list?
+avg_prob_list = np.mean(stack_loss_list, axis=0)
+
 dict_results = {
-    "prob": loss_list,
+    "prob": avg_prob_list,
     "true_label": y_te,
     "id": ids_scans_test
 } 
