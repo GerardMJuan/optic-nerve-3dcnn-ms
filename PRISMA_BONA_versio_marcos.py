@@ -10,71 +10,105 @@ import sklearn
 from tensorflow import keras
 from tensorflow.keras import layers
 import sklearn
+from sklearn.model_selection import StratifiedGroupKFold
 from keras_preprocessing.image import ImageDataGenerator
 from random import random
 import matplotlib.pyplot  as plt
 import random
 
-from util_functions import process_scan
+"""
+path_scans='/mnt/nascarm01/data/Projectes/FAST_SAT/dataset_definitiu/'
+path_scans_test='/mnt/nascarm01/data/Projectes/FAST_SAT/testset/'
+path_excel='/mnt/nascarm01/data/Projectes/FAST_SAT/new_lesion2.xlsx'
+path_excel_test='/mnt/nascarm01/data/Projectes/FAST_SAT/test_labels.ods'
+"""
 
 path_scans='/mnt/Bessel/Gproj/Gerard_DATA/FAT-SAT/TRIO'
 path_excel='/mnt/Bessel/Gproj/Gerard_DATA/FAT-SAT/new_lesion2.xlsx'
-
 path_scans_test='/mnt/Bessel/Gproj/Gerard_DATA/FAT-SAT/PRISMA'
 path_excel_test='/mnt/Bessel/Gproj/Gerard_DATA/FAT-SAT/test_labels.ods'
 
-out_dir = "/mnt/Bessel/Gproj/Gerard_DATA/FAT-SAT/PRISMA_results"
+###############
+## FUNCTIONS ##
+###############
+
+def read_nifti_file(filepath):
+    """Read and load volume"""
+    # Read file
+    scan = nib.load(filepath)
+    # Get raw data
+    scan = scan.get_fdata()
+    return scan
+
+
+def normalize(volume):
+    """Normalize the volume"""
+    min = np.amin(volume) # HARDCODED ( need to change )
+    max = np.amax(volume) # HARDCODED ( need to change )
+    #volume[volume < min] = min
+    #volume[volume > max] = max
+    volume = (volume - min) / (max - min)
+    volume = volume.astype("float32")
+    return volume
+
+def normalize_mean(volume):
+    mean = np.average(volume)
+    std = np.std(volume)
+    volume = (volume - mean) / std
+    volume = volume.astype("float32")
+    return volume
+
+def process_scan(path):
+    """Read and resize volume"""
+    # Read scan
+    volume = read_nifti_file(path)
+    # Normalize
+    #volume = normalize(volume)
+    volume = normalize_mean(volume)
+    # Resize width, height and depth
+    # volume = resize_volume(volume)
+    return volume
+
+def process_scan_new(path, filename):
+    """Read and resize volume
+
+    TODO: CHANGE THIS FUNCTION SO THAT IT RETURNS A LIST OF SCANS"""
+    # Read scan
+    volume_list = []
+    # WE HAVE 9 SCANS PER SUBJECT
+    new_path = f'{path}/Eye_1_{filename}'
+    volume = read_nifti_file(new_path)
+    # Normalize
+    #volume = normalize(volume)
+
+    # need to apply normalize mean to all volumes
+    volume = normalize_mean(volume)
+    # Resize width, height and depth
+    # volume = resize_volume(volume)
+    return volume
+
 
 def train_preprocessing(volume, label):
     volume = tf.expand_dims(volume, axis=3)
+
     return volume, label
 
 def validation_preprocessing(volume, label):
-    """
-    Need to select first scan, the original one
-    """
     volume = tf.expand_dims(volume, axis=3)
 
     return volume, label
 
-def data_aug_select_vol(volume, label):
-    """
-    This function selects, at compute time, a random volume from the available volumes.
-
-    It is a combination of offline and online data augmentation, just having the slices precomputed.
-    It selects a random slice each time.
-
-    This means that we need to load all the slices in a dictionary, in the other files.
-
-    It needs to go before the train_preprocessing values
-    """
-    # select a random one
-    idx = np.random.choice(volume.shape[0])
-    volume = volume[idx]
-    return volume, label
 
 def data_aug(volume, label):
-    #noise
     noise = np.random.normal(0,0.05,(40,31,13))
-    noise = np.asarray(noise,dtype=np.float32)
+    noise=np.asarray(noise,dtype=np.float32)
     noise = tf.convert_to_tensor(noise)
     noise = tf.expand_dims(noise, axis=3)
 
     r = random.random()
     if r<0.5:
         volume = volume + noise
-    return volume,label
 
-
-def select_vol_validation(volume, label):
-    """
-    Same as before but without data validation
-
-    selecting always the same volume
-
-    """
-    # select a random one
-    volume = volume[0]
     return volume, label
 
 
@@ -91,15 +125,15 @@ for row in info.itertuples():
     ids_excel.append(str(row[1]))
     left=row[2]
     if left=='Y':
-        label_left.append(float(1))
+        label_left.append(np.float(1))
     else:
-        label_left.append(float(0))
+        label_left.append(np.float(0))
 
     right=row[3]
     if right=='Y':
-        label_right.append(float(1))
+        label_right.append(np.float(1))
     else:
-        label_right.append(float(0))
+        label_right.append(np.float(0))
 
 #test
 info=pd.read_excel(path_excel_test)
@@ -112,18 +146,18 @@ for row in info.itertuples():
     ids_excel_test.append(str(row[1]))
     left_test=row[2]
     if left_test=='Y':
-        label_left_test.append(float(1))
+        label_left_test.append(np.float(1))
         n_lesio+=1
     else:
-        label_left_test.append(float(0))
+        label_left_test.append(np.float(0))
         n_nolesio+=1
 
     right_test=row[3]
     if right_test=='Y':
-        label_right_test.append(float(1))
+        label_right_test.append(np.float(1))
         n_lesio+=1
     else:
-        label_right_test.append(float(0))
+        label_right_test.append(np.float(0))
         n_nolesio+=1
 
 print('Amount of eyes with lesions in test = ', str(n_lesio))
@@ -142,8 +176,11 @@ labels=[]
 for infile in tqdm(listdir(path_scans)):
     ids_scans.append(infile+'_l')
     ids_scans.append(infile+'_r')
-    scans.append(process_scan(f'{path_scans}/{infile}', 'n4_{}_T2FastSat_crop_Left_flipped.nii'.format(infile)))
-    scans.append(process_scan(f'{path_scans}/{infile}', 'n4_{}_T2FastSat_crop_Right.nii'.format(infile)))
+    #scans.append(process_scan(path_scans+infile+'/Eye_n4_{}_T2FastSat_crop_Left_flipped.nii'.format(infile)))
+    #scans.append(process_scan(path_scans+infile+'/Eye_n4_{}_T2FastSat_crop_Right.nii'.format(infile)))
+
+    scans.append(process_scan_new(f'{path_scans}/{infile}', 'n4_{}_T2FastSat_crop_Left_flipped.nii'.format(infile)))
+    scans.append(process_scan_new(f'{path_scans}/{infile}', 'n4_{}_T2FastSat_crop_Right.nii'.format(infile)))
 
     position=ids_excel.index(infile)
     labels.append(label_left[position])
@@ -158,12 +195,17 @@ y_test=[]
 for infile in tqdm(listdir(path_scans_test)):
     ids_scans_test.append(infile+'_l')
     ids_scans_test.append(infile+'_r')
-    x_test.append(process_scan(f'{path_scans_test}/{infile}', 'n4_{}_T2FastSat_crop_Left_flipped.nii'.format(infile)))
-    x_test.append(process_scan(f'{path_scans_test}/{infile}', 'n4_{}_T2FastSat_crop_Right.nii'.format(infile)))
+    # x_test.append(process_scan(path_scans_test+infile+'/Eye_n4_{}_T2FastSat_crop_Left_flipped.nii'.format(infile)))
+    # x_test.append(process_scan(path_scans_test+infile+'/Eye_n4_{}_T2FastSat_crop_Right.nii'.format(infile)))
+
+    x_test.append(process_scan_new(f'{path_scans_test}/{infile}', 'n4_{}_T2FastSat_crop_Left_flipped.nii'.format(infile)))
+    x_test.append(process_scan_new(f'{path_scans_test}/{infile}', 'n4_{}_T2FastSat_crop_Right.nii'.format(infile)))
 
     position=ids_excel_test.index(infile)
     y_test.append(label_left_test[position])
     y_test.append(label_right_test[position])
+
+print(len(x_test))
 
 #################
 # CNN STRUCTURE #
@@ -190,6 +232,8 @@ recall_permu=[]
 precisiontrue_permu=[]
 precisionfalse_permu=[]
 specificity_permu=[]
+
+stack_loss_list=[]
 
 iterations=200
 for p in tqdm(range(iterations)):
@@ -268,8 +312,6 @@ for p in tqdm(range(iterations)):
     x_train=np.asarray(x_train,dtype=np.float32)
     y_train=np.asarray(y_train,dtype=np.float32)
 
-    x_test=np.asarray(x_test,dtype=np.float32)
-    y_test=np.asarray(y_test,dtype=np.float32)
 
     # Define data loaders.
     train_loader = tf.data.Dataset.from_tensor_slices((x_train, y_train))
@@ -280,28 +322,24 @@ for p in tqdm(range(iterations)):
     # Augment the on the fly during training.
     train_dataset = (
         train_loader.shuffle(len(x_train))
-        .map(select_vol_validation)
         .map(train_preprocessing)
         .map(data_aug)
-        #.map(py_augment)
         #.map(lambda x, y: (trainAug(x), y))
         .batch(batch_size)
         .prefetch(2)
     )
+
 
     def get_model(width=40, height=31, depth=13):
 
         inputs = keras.Input((width, height, depth, 1))
 
         x = layers.Conv3D(filters=32, kernel_size=3, activation="relu")(inputs)
-        #x = layers.Conv3D(filters=16, kernel_size=3, activation="relu")(x)
         x = layers.MaxPool3D(pool_size=2)(x)
-        #x = layers.BatchNormalization()(x)
         x = layers.Dropout(0.25)(x)
 
         x = layers.Conv3D(filters=64, kernel_size=3, activation="relu")(x)
         x = layers.MaxPool3D(pool_size=2)(x)
-        #x = layers.BatchNormalization()(x)
         x = layers.Dropout(0.25)(x)
 
         x = layers.GlobalAveragePooling3D()(x)
@@ -310,7 +348,6 @@ for p in tqdm(range(iterations)):
 
         outputs = layers.Dense(units=1, activation="sigmoid")(x)
 
-        # Define the model.
         model = keras.Model(inputs, outputs, name="3dcnn")
         return model
 
@@ -331,7 +368,7 @@ for p in tqdm(range(iterations)):
 
     # Define callbacks.
     checkpoint_cb = keras.callbacks.ModelCheckpoint(
-        f'{out_dir}/models/3d_image_classification.h5', monitor='acc', save_best_only=True , mode='max'
+        "3d_image_classification.h5", monitor='acc', save_best_only=True , mode='max'
     )
     early_stopping_cb = keras.callbacks.EarlyStopping(monitor="acc", patience=300)
 
@@ -346,8 +383,8 @@ for p in tqdm(range(iterations)):
     #plt.plot(history.history['val_acc'])
     plt.legend(['Train loss'])#, 'Val loss', 'Train acc', 'Val acc'])
     plt.title('Metrics results')
-    plt.savefig(f'{out_dir}/metric_plots/plot_{p}.png')
-    plt.close()
+    #plt.savefig('/mnt/nascarm01/data/Projectes/FAST_SAT/metric_plots/plot_{}.png'.format(p))
+    #plt.close()
 
     #model.load_weights("3d_image_classification.h5")
 
@@ -372,7 +409,7 @@ for p in tqdm(range(iterations)):
     y_r_list=[]
 
     for i in range(len(x_te)):
-        images = np.expand_dims(x_te[i][0], axis=-1)
+        images = np.expand_dims(x_te[i], axis=-1)
         images = tf.Variable(np.expand_dims(images, axis=0))
 
         with tf.GradientTape() as tape:
@@ -410,6 +447,8 @@ for p in tqdm(range(iterations)):
         elif y_te[i]!=np.around(loss)[0] and y_te[i]==1.0: #fn
             fn.append(grad_eval)
             id_scan_fn.append(ids_scans_test[i])
+
+    stack_loss_list.append(loss_list)
 
     print('True positives',len(tp))
     print('True negatives', len(tn))
@@ -454,9 +493,8 @@ maxpos = accuracy_bal.index(maxvalue)
 tp,tn,fp,fn=[tp_sm[maxpos],tn_sm[maxpos],fp_sm[maxpos],fn_sm[maxpos]]
 id_scan_tp,id_scan_tn,id_scan_fp,id_scan_fn=[ids_tp_sm[maxpos],ids_tn_sm[maxpos],ids_fp_sm[maxpos],ids_fn_sm[maxpos]]
 
-
-#delete previous scans because each time it changes
 """
+#delete previous scans because each time it changes
 import os
 import glob
 #save saliency maps of individual scans
@@ -464,7 +502,7 @@ general_scans=[tp,tn,fp,fn]
 general_names=['tp','tn','fp','fn']
 general_ids=[id_scan_tp,id_scan_tn,id_scan_fp,id_scan_fn]
 for i in range(4):
-    path='saliency maps test/{}'.format(general_names[i])
+    path='/mnt/nascarm01/data/Projectes/FAST_SAT/saliency maps test/{}'.format(general_names[i])
     for filename in os.listdir(path):
         f = os.path.join(path, filename)
         os.remove(f)
@@ -478,9 +516,8 @@ for i in range(4):
             scan_ex = nib.load(path_scans_test+id_value+'/Eye_n4_{}_T2FastSat_crop_Left_flipped.nii'.format(id_value,))
 
         img=nib.Nifti1Image(general_scans[i][j].numpy().squeeze(),scan_ex.affine,scan_ex.header)
-        nib.save(img,'saliency maps test/{}/{}.nii.gz'.format(general_names[i],str(general_ids[i][j])+'_smap'))
+        nib.save(img,'/mnt/nascarm01/data/Projectes/FAST_SAT/saliency maps test/{}/{}.nii.gz'.format(general_names[i],str(general_ids[i][j])+'_smap'))
 """
-
 ###################
 ## FINAL METRICS ##
 ###################
@@ -488,6 +525,7 @@ for i in range(4):
 accuracy_av=sum(accuracy)/iterations
 acc_av_std=np.std(accuracy)
 accuracy_bal_av=sum(accuracy_bal)/iterations
+acc_av_bal_std=np.std(accuracy_bal)
 tp_average=sum(tp_permu)/iterations
 tp_std=np.std(tp_permu)
 tn_average=sum(tn_permu)/iterations
@@ -516,6 +554,7 @@ print('False negatives std ', fn_std)
 print('Accuracy average ='+str(accuracy_av))
 print('Std of accuracies = ' + str(acc_av_std))
 print('Accuracy  average balanced='+str(accuracy_bal_av))
+print('std of balanced accuracies='+str(acc_av_bal_std))
 print('Min value accuracy balanced = ' +str(minvalue))
 print('Max value accuracy balanced = ' + str(maxvalue))
 print('Recall average='+str(recall_av))
@@ -533,16 +572,44 @@ print('Specificity std = ' + str(specificity_std))
 
 import csv
 
-with open(f'{out_dir}/results_test.csv', 'w', newline='') as file:
+with open('results_test.csv', 'w', newline='') as file:
     writer = csv.writer(file)
     writer.writerow(['Permutation', 'Accuracy', 'Accuracy Balanced', 'Recall', 'Precision Negative', 'Precision Positive', 'Specificity'])
     for i in range(iterations):
         writer.writerow([i,accuracy[i],accuracy_bal[i], recall_permu[i],precisionfalse_permu[i],precisiontrue_permu[i],specificity_permu[i]])
 
+
+
+'''
+True positives 9.12
+True positives std  1.93277003288027
+True negatives 75.47
+True negatives std  13.361478211635118
+False positives 34.53
+False positives std  13.361478211635118
+False negatives 4.88
+False negatives std  1.93277003288027
+Accuracy average =68.21774193548386
+Std of accuracies = 9.55813242330509
+Accuracy  average balanced=0.6687597402597405
+Min value accuracy balanced = 0.525974025974026
+Max value accuracy balanced = 0.7519480519480519
+Recall average=0.6514285714285707
+Recall std=0.13805500234859072
+Precision false average =0.9412170956468564
+Precision false std = 0.015974258382609997
+Precision true average = 0.22098951965539423
+Precision true std = 0.046258955788752505
+Specificity average = 0.6860909090909089
+Specificity std = 0.12146798374213745
+'''
+
 ########################
 ## Save loss list    ##
 # (And create AUC)   ##
 ########################
+
+loss_list = np.mean(stack_loss_list, axis=0)
 
 # ha de ser un csv ammb unfo del true label, les probabilitats i si es possible,
 # el nom( tot i que no es obligatori),
@@ -553,5 +620,5 @@ dict_results = {
     "id": ids_scans_test
 }
 df_results = pd.DataFrame(dict_results)
-df_results.to_csv(f'{out_dir}/output_probabilities.csv', index=False)
+df_results.to_csv('output_probabilities.csv', index=False)
 # OPEN PROBLEM: HOW TO combine results for each?
