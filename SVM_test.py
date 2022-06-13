@@ -29,13 +29,20 @@ path_excel_test='/mnt/Bessel/Gproj/Gerard_DATA/FAT-SAT/test_labels.ods'
 
 # type of model
 model_name = "SVM" # Either SVM or RF
-out_dir = f"/mnt/Bessel/Gproj/Gerard_DATA/FAT-SAT/{model_name}_results"
+out_dir = f"/mnt/Bessel/Gproj/Gerard_DATA/FAT-SAT/{model_name}_noperm_results"
 
 ## BEST PARAMS (from validation)
 if model_name == "SVM":
-    params = {}
+    params = {"kernel": "rbf",
+              "gamma": "auto",
+              "C": 10}
 else:
-    params = {}
+    params = {"criterion": "entropy",
+              "max_features": "auto",
+              "min_samples_leaf": 8, 
+              "min_samples_split": 2,	
+              "n_estimators": 200}
+
 ###################
 #### read excel ###
 ###################
@@ -207,7 +214,7 @@ for p in tqdm(range(iterations)):
 
     if model_name == "SVM":
         clf = SVC()
-        clf.set_params(params) # set the parameters
+        clf.set_params(**params) # set the parameters
         clf.fit(x_train_svm, y_train)
         loss_list = clf.predict_proba(x_test_svm)[:, 1]
         acc=clf.score(x_test_svm,y_test)
@@ -216,7 +223,7 @@ for p in tqdm(range(iterations)):
         tn,fp,fn,tp=confusion_matrix(y_test,prediction).ravel()
     else:
         clf = RandomForestClassifier()
-        clf.set_params(params) # set the parameters
+        clf.set_params(**params) # set the parameters
         clf.fit(x_train_svm, y_train)
         loss_list = clf.predict_proba(x_test_svm)[:, 1]
         acc=clf.score(x_test_svm,y_test)
@@ -312,12 +319,31 @@ with open(f'{out_dir}/results_test.csv', 'w', newline='') as file:
 
 # average loss list?
 avg_prob_list = np.mean(stack_loss_list, axis=0)
+predictions = np.around(avg_prob_list)
+
+# get average probability and compute values from this
+from sklearn.metrics import confusion_matrix, accuracy_score, balanced_accuracy_score, precision_score, recall_score
+
+tn, fp, fn, tp = confusion_matrix(y_test, predictions).ravel()
+
+acc = accuracy_score(y_test, predictions)
+bal_acc =balanced_accuracy_score(y_test, predictions)
+spec = tn / (tn + fp)
+sens = tp / (tp + tn)
+precision = precision_score(y_test, predictions)
+recall = recall_score(y_test, predictions)
+
+print(f'Accuracy: {acc}')
+print(f'Bal. Accuracy: {bal_acc}')
+print(f'Specificity: {spec}')
+print(f'Sensitivity: {sens}')
+print(f'Precision: {precision}')
+print(f'Recall: {recall}')
 
 dict_results = {
     "prob": avg_prob_list,
     "true_label": y_test,
     "id": ids_scans_test
-} 
+}
 df_results = pd.DataFrame(dict_results)
 df_results.to_csv(f'{out_dir}/output_probabilities.csv', index=False)
-# OPEN PROBLEM: HOW TO combine results for each?

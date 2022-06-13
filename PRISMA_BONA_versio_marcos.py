@@ -10,23 +10,20 @@ import sklearn
 from tensorflow import keras
 from tensorflow.keras import layers
 import sklearn
-from sklearn.model_selection import StratifiedGroupKFold
 from keras_preprocessing.image import ImageDataGenerator
 from random import random
 import matplotlib.pyplot  as plt
 import random
 
-"""
 path_scans='/mnt/nascarm01/data/Projectes/FAST_SAT/dataset_definitiu/'
 path_scans_test='/mnt/nascarm01/data/Projectes/FAST_SAT/testset/'
 path_excel='/mnt/nascarm01/data/Projectes/FAST_SAT/new_lesion2.xlsx'
 path_excel_test='/mnt/nascarm01/data/Projectes/FAST_SAT/test_labels.ods'
-"""
 
-path_scans='/mnt/Bessel/Gproj/Gerard_DATA/FAT-SAT/TRIO'
-path_excel='/mnt/Bessel/Gproj/Gerard_DATA/FAT-SAT/new_lesion2.xlsx'
-path_scans_test='/mnt/Bessel/Gproj/Gerard_DATA/FAT-SAT/PRISMA'
-path_excel_test='/mnt/Bessel/Gproj/Gerard_DATA/FAT-SAT/test_labels.ods'
+# path_scans='/mnt/Bessel/Gproj/Gerard_DATA/FAT-SAT/TRIO'
+# path_excel='/mnt/Bessel/Gproj/Gerard_DATA/FAT-SAT/new_lesion2.xlsx'
+# path_scans_test='/mnt/Bessel/Gproj/Gerard_DATA/FAT-SAT/PRISMA'
+# path_excel_test='/mnt/Bessel/Gproj/Gerard_DATA/FAT-SAT/test_labels.ods'
 
 ###############
 ## FUNCTIONS ##
@@ -176,11 +173,11 @@ labels=[]
 for infile in tqdm(listdir(path_scans)):
     ids_scans.append(infile+'_l')
     ids_scans.append(infile+'_r')
-    #scans.append(process_scan(path_scans+infile+'/Eye_n4_{}_T2FastSat_crop_Left_flipped.nii'.format(infile)))
-    #scans.append(process_scan(path_scans+infile+'/Eye_n4_{}_T2FastSat_crop_Right.nii'.format(infile)))
+    scans.append(process_scan(path_scans+infile+'/Eye_n4_{}_T2FastSat_crop_Left_flipped.nii'.format(infile)))
+    scans.append(process_scan(path_scans+infile+'/Eye_n4_{}_T2FastSat_crop_Right.nii'.format(infile)))
 
-    scans.append(process_scan_new(f'{path_scans}/{infile}', 'n4_{}_T2FastSat_crop_Left_flipped.nii'.format(infile)))
-    scans.append(process_scan_new(f'{path_scans}/{infile}', 'n4_{}_T2FastSat_crop_Right.nii'.format(infile)))
+    # scans.append(process_scan_new(f'{path_scans}/{infile}', 'n4_{}_T2FastSat_crop_Left_flipped.nii'.format(infile)))
+    # scans.append(process_scan_new(f'{path_scans}/{infile}', 'n4_{}_T2FastSat_crop_Right.nii'.format(infile)))
 
     position=ids_excel.index(infile)
     labels.append(label_left[position])
@@ -195,11 +192,11 @@ y_test=[]
 for infile in tqdm(listdir(path_scans_test)):
     ids_scans_test.append(infile+'_l')
     ids_scans_test.append(infile+'_r')
-    # x_test.append(process_scan(path_scans_test+infile+'/Eye_n4_{}_T2FastSat_crop_Left_flipped.nii'.format(infile)))
-    # x_test.append(process_scan(path_scans_test+infile+'/Eye_n4_{}_T2FastSat_crop_Right.nii'.format(infile)))
+    x_test.append(process_scan(path_scans_test+infile+'/Eye_n4_{}_T2FastSat_crop_Left_flipped.nii'.format(infile)))
+    x_test.append(process_scan(path_scans_test+infile+'/Eye_n4_{}_T2FastSat_crop_Right.nii'.format(infile)))
 
-    x_test.append(process_scan_new(f'{path_scans_test}/{infile}', 'n4_{}_T2FastSat_crop_Left_flipped.nii'.format(infile)))
-    x_test.append(process_scan_new(f'{path_scans_test}/{infile}', 'n4_{}_T2FastSat_crop_Right.nii'.format(infile)))
+    # x_test.append(process_scan_new(f'{path_scans_test}/{infile}', 'n4_{}_T2FastSat_crop_Left_flipped.nii'.format(infile)))
+    # x_test.append(process_scan_new(f'{path_scans_test}/{infile}', 'n4_{}_T2FastSat_crop_Right.nii'.format(infile)))
 
     position=ids_excel_test.index(infile)
     y_test.append(label_left_test[position])

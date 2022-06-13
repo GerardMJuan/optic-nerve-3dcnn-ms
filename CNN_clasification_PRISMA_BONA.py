@@ -279,6 +279,16 @@ for p in tqdm(range(iterations)):
     # batch size can be larger, as our images are smaller
     batch_size = 16
 
+
+    ### PARAMETERS
+    ## ORIGINAL:
+    # dropout = 0.25
+    # filters = 32,64,128
+    # lr = 0.001
+    # dense = 128
+    # bn = False
+    #  epochs = 100
+
     # Augment the on the fly during training.
     train_dataset = (
         train_loader.shuffle(len(x_train))
@@ -295,19 +305,19 @@ for p in tqdm(range(iterations)):
 
         inputs = keras.Input((width, height, depth, 1))
 
-        x = layers.Conv3D(filters=32, kernel_size=3, activation="relu")(inputs)
+        x = layers.Conv3D(filters=64, kernel_size=3, activation="relu")(inputs)
         #x = layers.Conv3D(filters=16, kernel_size=3, activation="relu")(x)
         x = layers.MaxPool3D(pool_size=2)(x)
         #x = layers.BatchNormalization()(x)
         x = layers.Dropout(0.25)(x)
 
-        x = layers.Conv3D(filters=64, kernel_size=3, activation="relu")(x)
+        x = layers.Conv3D(filters=128, kernel_size=3, activation="relu")(x)
         x = layers.MaxPool3D(pool_size=2)(x)
         #x = layers.BatchNormalization()(x)
         x = layers.Dropout(0.25)(x)
 
         x = layers.GlobalAveragePooling3D()(x)
-        x = layers.Dense(units=128, activation="relu")(x)
+        x = layers.Dense(units=256, activation="relu")(x)
         x = layers.Dropout(0.25)(x)
 
         outputs = layers.Dense(units=1, activation="sigmoid")(x)
@@ -321,13 +331,13 @@ for p in tqdm(range(iterations)):
     model.summary()
 
     # Compile model.
-    initial_learning_rate = 0.001
+    initial_learning_rate = 3e-4
     lr_schedule = keras.optimizers.schedules.ExponentialDecay(
         initial_learning_rate, decay_steps=100000, decay_rate=0.96, staircase=True
     )
     model.compile(
         loss="binary_crossentropy",
-        optimizer=keras.optimizers.Adam(learning_rate=initial_learning_rate ),
+        optimizer=keras.optimizers.Adam(learning_rate=lr_schedule ),
         metrics=["acc"],
     )
 
@@ -335,13 +345,13 @@ for p in tqdm(range(iterations)):
     checkpoint_cb = keras.callbacks.ModelCheckpoint(
         f'{out_dir}/models/3d_image_classification.h5', monitor='acc', save_best_only=True , mode='max'
     )
-    early_stopping_cb = keras.callbacks.EarlyStopping(monitor="acc", patience=300)
-
 
     # Train the model, doing validation at the end of each epoch
-    epochs = 100
+    epochs = 200
+    
+    early_stopping_cb = keras.callbacks.EarlyStopping(monitor="loss", patience=15)
 
-    history = model.fit(train_dataset,epochs=epochs,shuffle=True,verbose=1,callbacks=[checkpoint_cb])
+    history = model.fit(train_dataset,epochs=epochs,shuffle=True,verbose=1,callbacks=[early_stopping_cb])
 
     plt.plot(history.history['loss'])
     #plt.plot(history.history['acc'])
@@ -553,6 +563,26 @@ with open(f'{out_dir}/results_test.csv', 'w', newline='') as file:
 
 # average loss list?
 avg_prob_list = np.mean(stack_loss_list, axis=0)
+predictions = np.around(avg_prob_list)
+
+# get average probability and compute values from this
+from sklearn.metrics import confusion_matrix, accuracy_score, balanced_accuracy_score, precision_score, recall_score
+
+tn, fp, fn, tp = confusion_matrix(y_te, predictions).ravel()
+
+acc = accuracy_score(y_te, predictions)
+bal_acc =balanced_accuracy_score(y_te, predictions)
+spec = tn / (tn + fp)
+sens = tp / (tp + fn)
+precision = precision_score(y_te, predictions)
+recall = recall_score(y_te, predictions)
+
+print(f'Accuracy: {acc}')
+print(f'Bal. Accuracy: {bal_acc}')
+print(f'Specificity: {spec}')
+print(f'Sensitivity: {sens}')
+print(f'Precision: {precision}')
+print(f'Recall: {recall}')
 
 dict_results = {
     "prob": avg_prob_list,
@@ -560,5 +590,5 @@ dict_results = {
     "id": ids_scans_test
 }
 df_results = pd.DataFrame(dict_results)
-df_results.to_csv(f'{out_dir}/output_probabilities.csv', index=False)
+df_results.to_csv(f'{out_dir}/output_probabilities_lowlr.csv', index=False)
 # OPEN PROBLEM: HOW TO combine results for each?
