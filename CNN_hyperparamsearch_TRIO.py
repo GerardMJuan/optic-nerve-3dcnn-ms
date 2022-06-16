@@ -148,20 +148,20 @@ print('The number of nerves loaded is: ' + str(len(labels_l)+len(labels_r)))
 #####################
 
 bn_list = [True, False]
-dropout_list = [0.1, 0.25, 0.4]
-lr_list = [0.001, 0.0001]
+dropout_list = [0, 0.1, 0.25]
+lr_list = [3e-4]
 filt_factor_list = [0.5, 1, 2]
 dense_list = [64, 128, 256]
 
 # create new dir in out dir
-if not os.path.exists(out_dir + "/hyperparam_search"):
-    os.makedirs(out_dir + "/hyperparam_search")
+if not os.path.exists(out_dir + "/hyperparam_search_lrlow"):
+    os.makedirs(out_dir + "/hyperparam_search_lrlow")
 
 hyperparam = product(bn_list, dropout_list, lr_list, filt_factor_list, dense_list)
 
 for (bn, dropout, lr, filt_factor, dense) in hyperparam:
     # check if the iteration already exists in disk, if it does, continue
-    hyperparam_csv = f"{out_dir}/hyperparam_search/{bn}_{dropout}_{lr}_{filt_factor}_{dense}.csv"
+    hyperparam_csv = f"{out_dir}/hyperparam_search_lrlow/{bn}_{dropout}_{lr}_{filt_factor}_{dense}.csv"
     if os.path.exists(hyperparam_csv): 
         print('Already run!')
         continue
@@ -504,7 +504,7 @@ for (bn, dropout, lr, filt_factor, dense) in hyperparam:
         #checkpoint_cb = keras.callbacks.ModelCheckpoint(
         #    "3d_image_classification.h5", monitor='acc', save_best_only=True , mode='max'
         #)
-        early_stopping_cb = keras.callbacks.EarlyStopping(monitor="loss", patience=10)
+        early_stopping_cb = keras.callbacks.EarlyStopping(monitor="loss", patience=15)
 
         # Train the model, doing validation at the end of each epoch
         epochs = 200
@@ -730,10 +730,10 @@ for (bn, dropout, lr, filt_factor, dense) in hyperparam:
 
 ## Enter folder and merge all the csv in the folder
 list_of_results = []
-for csv_file in glob.glob(f"{out_dir}/hyperparam_search/*.csv"):
+for csv_file in glob.glob(f"{out_dir}/hyperparam_search_lrlow/*.csv"):
     df_csv = pd.read_csv(csv_file)
     list_of_results.append(df_csv)
 
 # save resulting csv
 df_list_of_results = pd.concat(list_of_results)
-df_list_of_results.to_csv(f"{out_dir}/hyperparam_file.csv")
+df_list_of_results.to_csv(f"{out_dir}/hyperparam_file_lrlow.csv")

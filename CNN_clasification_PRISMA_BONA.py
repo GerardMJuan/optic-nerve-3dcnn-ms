@@ -309,16 +309,16 @@ for p in tqdm(range(iterations)):
         #x = layers.Conv3D(filters=16, kernel_size=3, activation="relu")(x)
         x = layers.MaxPool3D(pool_size=2)(x)
         #x = layers.BatchNormalization()(x)
-        x = layers.Dropout(0.25)(x)
+        x = layers.Dropout(0.1)(x)
 
         x = layers.Conv3D(filters=128, kernel_size=3, activation="relu")(x)
         x = layers.MaxPool3D(pool_size=2)(x)
         #x = layers.BatchNormalization()(x)
-        x = layers.Dropout(0.25)(x)
+        x = layers.Dropout(0.1)(x)
 
         x = layers.GlobalAveragePooling3D()(x)
         x = layers.Dense(units=256, activation="relu")(x)
-        x = layers.Dropout(0.25)(x)
+        x = layers.Dropout(0.1)(x)
 
         outputs = layers.Dense(units=1, activation="sigmoid")(x)
 
