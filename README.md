@@ -4,7 +4,7 @@ DOI: https://doi.org/10.1016/j.nicl.2022.103187
 
 ## Graphical Abstract:
 
-![Graphical abstract](graphical.pdf)
+![Graphical abstract](graphical.png)
 
 ## Repository organization:
 (TODO)
