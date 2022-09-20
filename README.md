@@ -1,4 +1,4 @@
-# optic-nerve-3dcnn-ms
+# Automatic detection of optical nerve lesions using a 3D convolutional neural network
 Code for the paper "Automatic detection of optical nerve lesions using a 3D convolutional neural network", published in Neuroimage:Clinical.
 DOI: https://doi.org/10.1016/j.nicl.2022.103187
 
