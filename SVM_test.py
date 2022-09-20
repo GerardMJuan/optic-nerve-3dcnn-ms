@@ -25,17 +25,20 @@ path_scans='/mnt/Bessel/Gproj/Gerard_DATA/FAT-SAT/TRIO'
 path_excel='/mnt/Bessel/Gproj/Gerard_DATA/FAT-SAT/new_lesion2.xlsx'
 
 path_scans_test='/mnt/Bessel/Gproj/Gerard_DATA/FAT-SAT/PRISMA'
-path_excel_test='/mnt/Bessel/Gproj/Gerard_DATA/FAT-SAT/test_labels.ods'
+path_excel_test='/mnt/Bessel/Gproj/Gerard_DATA/FAT-SAT/test_labels_rovira.ods'
 
 # type of model
 model_name = "SVM" # Either SVM or RF
-out_dir = f"/mnt/Bessel/Gproj/Gerard_DATA/FAT-SAT/{model_name}_noperm_results"
+out_dir = f"/mnt/Bessel/Gproj/Gerard_DATA/FAT-SAT/{model_name}_perm_results_rovira"
+if not os.path.exists(out_dir):
+    os.makedirs(out_dir)
 
 ## BEST PARAMS (from validation)
 if model_name == "SVM":
     params = {"kernel": "rbf",
               "gamma": "auto",
-              "C": 10}
+              "C": 10,
+              "probability": True}
 else:
     params = {"criterion": "entropy",
               "max_features": "auto",
@@ -324,12 +327,13 @@ predictions = np.around(avg_prob_list)
 # get average probability and compute values from this
 from sklearn.metrics import confusion_matrix, accuracy_score, balanced_accuracy_score, precision_score, recall_score
 
+predictions[predictions == 0] = -1
 tn, fp, fn, tp = confusion_matrix(y_test, predictions).ravel()
 
 acc = accuracy_score(y_test, predictions)
 bal_acc =balanced_accuracy_score(y_test, predictions)
 spec = tn / (tn + fp)
-sens = tp / (tp + tn)
+sens = tp / (tp + fn)
 precision = precision_score(y_test, predictions)
 recall = recall_score(y_test, predictions)
 

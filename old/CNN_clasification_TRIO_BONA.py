@@ -20,7 +20,10 @@ from util_functions import process_scan
 path_scans='/mnt/Bessel/Gproj/Gerard_DATA/FAT-SAT/TRIO'
 path_excel='/mnt/Bessel/Gproj/Gerard_DATA/FAT-SAT/new_lesion2.xlsx'
 
-out_dir = "/mnt/Bessel/Gproj/Gerard_DATA/FAT-SAT/TRIO_results"
+out_dir = "/mnt/Bessel/Gproj/Gerard_DATA/FAT-SAT/TRIO_results_alex"
+
+if not os.path.exists(out_dir):
+    os.makedirs(out_dir)
 
 def train_preprocessing(volume, label):
     volume = tf.expand_dims(volume, axis=3)
@@ -165,7 +168,7 @@ precisionfalse_permu=[]
 specificity_permu=[]
 
 
-iterations=1
+iterations=200
 for p in tqdm(range(iterations)):
 
     pos2_scans=[]
@@ -212,10 +215,11 @@ for p in tqdm(range(iterations)):
     ids_val=[]
 
     #divide scanners with a Y and a N eye
-    selection=list(range(68))
+    n_YN = len(pos_labels)
+    selection=list(range(n_YN))
     selection=random.sample(selection,len(selection))
-    for i in range(68):
-        if i<53:
+    for i in range(n_YN):
+        if i<n_YN*0.75:
             x_train.append(pos_scans[selection[i]])
             y_train.append(pos_labels[selection[i]])
             ids_train.append(pos_ids[selection[i]])
@@ -227,12 +231,12 @@ for p in tqdm(range(iterations)):
     print(np.shape)
 
     #divide scanners with a Y and a Y eye
-    selection2=list(range(2))
+    n_YY = len(pos2_scans)
+    selection2=list(range(n_YY))
     selection2=random.sample(selection2,len(selection2))
     train_selection2=selection2[0]
     val_selection2=selection2[-1]
 
-    
     x_train.append(pos2_scans[train_selection2])
     y_train.append(pos2_labels[train_selection2])
     ids_train.append(pos2_ids[train_selection2])
@@ -242,11 +246,12 @@ for p in tqdm(range(iterations)):
     ids_val.append(pos2_ids[val_selection2])
 
     #divide scanners with a N and a N eye
-    selection3=list(range(37))
+    n_NN = len(neg_scans)
+    selection3=list(range(n_NN))
     selection3=random.sample(selection3,len(selection3))
 
-    for i in range(37):
-        if i<28:
+    for i in range(n_NN):
+        if i<n_NN*0.75:
             x_train.append(neg_scans[selection3[i]])
             y_train.append(neg_labels[selection3[i]])
             ids_train.append(neg_ids[selection3[i]])
@@ -402,7 +407,6 @@ for p in tqdm(range(iterations)):
     print("Positive percentage in val:", val_p_pctg)
     print("Negative percentage in val:", val_n_pctg)
 
-
     #convert to float
     # TODO: POSSIBLE NEEDS TO BE CHANGED, given that X now is a list of lists
     x_train=np.asarray(x_train,dtype=np.float32)
@@ -491,6 +495,9 @@ for p in tqdm(range(iterations)):
 
     history = model.fit(train_dataset,validation_data=validation_dataset,epochs=epochs,shuffle=True,verbose=1,callbacks=[checkpoint_cb])
     
+    if not os.path.exists(f'{out_dir}/metric_plots'): os.makedirs(f'{out_dir}/metric_plots')
+    if not os.path.exists(f'{out_dir}/models'): os.makedirs(f'{out_dir}/models')
+
     plt.plot(history.history['loss'])
     plt.plot(history.history['val_loss'])
     #plt.plot(history.history['acc'])

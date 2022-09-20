@@ -147,11 +147,19 @@ print('The number of nerves loaded is: ' + str(len(labels_l)+len(labels_r)))
 # HYPERPARAM SEARCH #
 #####################
 
+"""
 bn_list = [True, False]
 dropout_list = [0, 0.1, 0.25]
 lr_list = [3e-4]
 filt_factor_list = [0.5, 1, 2]
 dense_list = [64, 128, 256]
+"""
+
+bn_list = [False]
+dropout_list = [0.1]
+lr_list = [3e-4]
+filt_factor_list = [2]
+dense_list = [256]
 
 # create new dir in out dir
 if not os.path.exists(out_dir + "/hyperparam_search_lrlow"):
@@ -162,9 +170,9 @@ hyperparam = product(bn_list, dropout_list, lr_list, filt_factor_list, dense_lis
 for (bn, dropout, lr, filt_factor, dense) in hyperparam:
     # check if the iteration already exists in disk, if it does, continue
     hyperparam_csv = f"{out_dir}/hyperparam_search_lrlow/{bn}_{dropout}_{lr}_{filt_factor}_{dense}.csv"
-    if os.path.exists(hyperparam_csv): 
-        print('Already run!')
-        continue
+    # if os.path.exists(hyperparam_csv): 
+    #     print('Already run!')
+    #    continue
 
     #Loop for performing different permutations and do an average of the results
     accuracy=[]
@@ -186,7 +194,7 @@ for (bn, dropout, lr, filt_factor, dense) in hyperparam:
     precisiontrue_permu=[]
     specificity_permu=[]
 
-    iterations=100
+    iterations=200
     for p in tqdm(range(iterations)):
 
         pos2_scans=[]
@@ -233,10 +241,11 @@ for (bn, dropout, lr, filt_factor, dense) in hyperparam:
         ids_val=[]
 
         #divide scanners with a Y and a N eye
-        selection=list(range(68))
+        n_YN = len(pos_labels)
+        selection=list(range(n_YN))
         selection=random.sample(selection,len(selection))
-        for i in range(68):
-            if i<53:
+        for i in range(n_YN):
+            if i<n_YN*0.75:
                 x_train.append(pos_scans[selection[i]])
                 y_train.append(pos_labels[selection[i]])
                 ids_train.append(pos_ids[selection[i]])
@@ -248,11 +257,11 @@ for (bn, dropout, lr, filt_factor, dense) in hyperparam:
         print(np.shape)
 
         #divide scanners with a Y and a Y eye
-        selection2=list(range(2))
+        n_YY = len(pos2_scans)
+        selection2=list(range(n_YY))
         selection2=random.sample(selection2,len(selection2))
         train_selection2=selection2[0]
         val_selection2=selection2[-1]
-
         
         x_train.append(pos2_scans[train_selection2])
         y_train.append(pos2_labels[train_selection2])
@@ -263,11 +272,12 @@ for (bn, dropout, lr, filt_factor, dense) in hyperparam:
         ids_val.append(pos2_ids[val_selection2])
 
         #divide scanners with a N and a N eye
-        selection3=list(range(37))
+        n_NN = len(neg_scans)
+        selection3=list(range(n_NN))
         selection3=random.sample(selection3,len(selection3))
 
-        for i in range(37):
-            if i<28:
+        for i in range(n_NN):
+            if i<n_NN*0.75:
                 x_train.append(neg_scans[selection3[i]])
                 y_train.append(neg_labels[selection3[i]])
                 ids_train.append(neg_ids[selection3[i]])
@@ -641,7 +651,7 @@ for (bn, dropout, lr, filt_factor, dense) in hyperparam:
 
     #delete previous scans because each time it changes
     # ALSO POSSIBLE TO JUST REMOVE THIS
-    """
+    
     import os
     import glob
     #save saliency maps of individual scans
@@ -652,21 +662,20 @@ for (bn, dropout, lr, filt_factor, dense) in hyperparam:
         path=f'{out_dir}/saliency_maps/{general_names[i]}'
         if not os.path.exists(path):
             os.makedirs(path)
-        for filename in os.listdir(path):
-            f = os.path.join(path, filename)
-            os.remove(f)
+        # for filename in os.listdir(path):
+        #     f = os.path.join(path, filename)
+        #     os.remove(f)
 
         for j in range(len(general_ids[i])):
             id_exemple=general_ids[i][j]
             id_value=str(id_exemple[:-2])
             if id_exemple[-1]=='r':
-                scan_ex = nib.load(path_scans+id_value+'/Eye_n4_{}_T2FastSat_crop_Right.nii'.format(id_value,))
+                scan_ex = nib.load(path_scans+'/'+id_value+'/Eye_1_n4_{}_T2FastSat_crop_Right.nii'.format(id_value,))
             else:
-                scan_ex = nib.load(path_scans+id_value+'/Eye_n4_{}_T2FastSat_crop_Left_flipped.nii'.format(id_value,))
+                scan_ex = nib.load(path_scans+'/'+id_value+'/Eye_1_n4_{}_T2FastSat_crop_Left_flipped.nii'.format(id_value,))
 
             img=nib.Nifti1Image(general_scans[i][j].numpy().squeeze(),scan_ex.affine,scan_ex.header)
             nib.save(img, f'{out_dir}/saliency_maps/{general_names[i]}/{general_ids[i][j]}_smap.nii.gz')
-    """
 
     accuracy_av=sum(accuracy)/iterations
     acc_av_std=np.std(accuracy)
@@ -713,7 +722,7 @@ for (bn, dropout, lr, filt_factor, dense) in hyperparam:
 
     df_dict = {
         "bn": bn, 
-        "dropout": dropout, 
+        "dropout": dropout,
         "lr": lr, 
         "filt_factor": filt_factor, 
         "dense": dense,
@@ -722,12 +731,15 @@ for (bn, dropout, lr, filt_factor, dense) in hyperparam:
         'Accuracy Balanced std': accuracy_bal_std,
         'Recall':recall_av,
         'Precision': precisiontrue_av,
-        'Specificity': specificity_av
+        'Specificity': specificity_av,
+        'Recall std': recall_std,
+        'Specificity std': specificity_std,
     }
 
     df_results = pd.DataFrame(df_dict, index = [0])
     df_results.to_csv(hyperparam_csv, index=False)
 
+"""
 ## Enter folder and merge all the csv in the folder
 list_of_results = []
 for csv_file in glob.glob(f"{out_dir}/hyperparam_search_lrlow/*.csv"):
@@ -737,3 +749,4 @@ for csv_file in glob.glob(f"{out_dir}/hyperparam_search_lrlow/*.csv"):
 # save resulting csv
 df_list_of_results = pd.concat(list_of_results)
 df_list_of_results.to_csv(f"{out_dir}/hyperparam_file_lrlow.csv")
+"""

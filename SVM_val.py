@@ -16,7 +16,7 @@ from sklearn.metrics import balanced_accuracy_score
 from sklearn.model_selection import ParameterGrid
 
 from util_functions import process_scan
-
+import os
 ###################
 #### paths ###
 ###################
@@ -80,8 +80,12 @@ for infile in tqdm(listdir(path_scans)):
 #################
 
 # type of model
-model_name = "RF" # Either SVM or RF
+model_name = "SVM" # Either SVM or RF
 out_dir = "/mnt/Bessel/Gproj/Gerard_DATA/FAT-SAT/results"
+out_dir = "/mnt/Bessel/Gproj/Gerard_DATA/FAT-SAT/ALEX_base_results"
+
+if not os.path.exists(out_dir):
+    os.makedirs(out_dir)
 
 # create dataframe where we will store the results
 # well, not a dataframe, but a dictioanry of lists, will convert to dataframe later
@@ -89,7 +93,8 @@ out_dir = "/mnt/Bessel/Gproj/Gerard_DATA/FAT-SAT/results"
 # Create grid of parameters for each tal
 
 if model_name == "SVM":
-    grid = [{'kernel': ['linear'], 'C': [0.1, 1, 10], 'gamma': ['scale']}, {'kernel': ['rbf'], 'gamma': ['scale', 'auto'], 'C': [0.1, 1, 10]}, {'kernel': ['sigmoid'], 'gamma': ['scale', 'auto'], 'C': [0.1, 1, 10]}]
+    # grid = [{'kernel': ['linear'], 'C': [0.1, 1, 10], 'gamma': ['scale']}, {'kernel': ['rbf'], 'gamma': ['scale', 'auto'], 'C': [0.1, 1, 10]}, {'kernel': ['sigmoid'], 'gamma': ['scale', 'auto'], 'C': [0.1, 1, 10]}]
+    grid = [{'kernel': ['rbf'], 'gamma': ['auto'], 'C': [10]}]
 
     df_results = {'kernel': [],
                   'gamma': [],
@@ -107,11 +112,19 @@ if model_name == "SVM":
                 }
 
 else:
+    """
     grid = [{'criterion' : ['gini', 'entropy'],
              'max_features': ['auto', 'log2'],
              'min_samples_leaf': [2, 4, 8, 20],
              'min_samples_split': [0.5, 2, 5, 10],
              'n_estimators': [100, 200]}]
+    """
+
+    grid = [{'criterion' : ['entropy'],
+             'max_features': ['auto'],
+             'min_samples_leaf': [8],
+             'min_samples_split': [2],
+             'n_estimators': [200]}]
 
     df_results = {'criterion': [],
                   'max_features': [],
@@ -201,10 +214,11 @@ for params in grid_params:
         ids_val=[]
 
         #divide scanners with a Y and a N eye
-        selection=list(range(68))
+        n_YN = len(pos_labels)
+        selection=list(range(n_YN))
         selection=random.sample(selection,len(selection))
-        for i in range(68):
-            if i<53:
+        for i in range(n_YN):
+            if i<n_YN*0.75:
                 x_train.append(pos_scans[selection[i]])
                 y_train.append(pos_labels[selection[i]])
                 ids_train.append(pos_ids[selection[i]])
@@ -216,7 +230,8 @@ for params in grid_params:
         # print(np.shape)
 
         #divide scanners with a Y and a Y eye
-        selection2=list(range(2))
+        n_YY = len(pos2_scans)
+        selection2=list(range(n_YY))
         selection2=random.sample(selection2,len(selection2))
         train_selection2=selection2[0]
         val_selection2=selection2[-1]
@@ -231,11 +246,12 @@ for params in grid_params:
         ids_val.append(pos2_ids[val_selection2])
 
         #divide scanners with a N and a N eye
-        selection3=list(range(37))
+        n_NN = len(neg_scans)
+        selection3=list(range(n_NN))
         selection3=random.sample(selection3,len(selection3))
 
-        for i in range(37):
-            if i<28:
+        for i in range(n_NN):
+            if i<n_NN*0.75:
                 x_train.append(neg_scans[selection3[i]])
                 y_train.append(neg_labels[selection3[i]])
                 ids_train.append(neg_ids[selection3[i]])
@@ -317,8 +333,8 @@ for params in grid_params:
                 y_train_nolesion.append(y_train[i])
                 ids_xtrain_nolesion.append(ids_xtrain[i])
 
-        # print('Number of lesion scans in training dataset', lesio)
-        # print('Number of no-lesion scans in training dataset', nolesio)
+        print('Number of lesion scans in training dataset', lesio)
+        print('Number of no-lesion scans in training dataset', nolesio)
 
         #SELECT A SUBSAMPLING OF NEGATIVE CASES TO MATCH POSITIVE SIZE
 

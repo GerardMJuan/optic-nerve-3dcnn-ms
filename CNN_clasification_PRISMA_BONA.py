@@ -21,9 +21,11 @@ path_scans='/mnt/Bessel/Gproj/Gerard_DATA/FAT-SAT/TRIO'
 path_excel='/mnt/Bessel/Gproj/Gerard_DATA/FAT-SAT/new_lesion2.xlsx'
 
 path_scans_test='/mnt/Bessel/Gproj/Gerard_DATA/FAT-SAT/PRISMA'
-path_excel_test='/mnt/Bessel/Gproj/Gerard_DATA/FAT-SAT/test_labels.ods'
+path_excel_test='/mnt/Bessel/Gproj/Gerard_DATA/FAT-SAT/test_labels_rovira.ods'
 
-out_dir = "/mnt/Bessel/Gproj/Gerard_DATA/FAT-SAT/PRISMA_results"
+out_dir = "/mnt/Bessel/Gproj/Gerard_DATA/FAT-SAT/PRISMA_results_rovira"
+if not os.path.exists(out_dir):
+    os.makedirs(out_dir)
 
 def train_preprocessing(volume, label):
     volume = tf.expand_dims(volume, axis=3)
@@ -128,7 +130,6 @@ for row in info.itertuples():
 
 print('Amount of eyes with lesions in test = ', str(n_lesio))
 print('Amount of eyes with no lesions in test = ', str(n_nolesio))
-
 
 
 ################
@@ -342,9 +343,9 @@ for p in tqdm(range(iterations)):
     )
 
     # Define callbacks.
-    checkpoint_cb = keras.callbacks.ModelCheckpoint(
-        f'{out_dir}/models/3d_image_classification.h5', monitor='acc', save_best_only=True , mode='max'
-    )
+    # checkpoint_cb = keras.callbacks.ModelCheckpoint(
+    #     f'{out_dir}/models/3d_image_classification.h5', monitor='acc', save_best_only=True , mode='max'
+    # )
 
     # Train the model, doing validation at the end of each epoch
     epochs = 200
@@ -356,10 +357,10 @@ for p in tqdm(range(iterations)):
     plt.plot(history.history['loss'])
     #plt.plot(history.history['acc'])
     #plt.plot(history.history['val_acc'])
-    plt.legend(['Train loss'])#, 'Val loss', 'Train acc', 'Val acc'])
-    plt.title('Metrics results')
-    plt.savefig(f'{out_dir}/metric_plots/plot_{p}.png')
-    plt.close()
+    # plt.legend(['Train loss'])#, 'Val loss', 'Train acc', 'Val acc'])
+    # plt.title('Metrics results')
+    # plt.savefig(f'{out_dir}/metric_plots/plot_{p}.png')
+    # plt.close()
 
     #model.load_weights("3d_image_classification.h5")
 
@@ -470,7 +471,7 @@ id_scan_tp,id_scan_tn,id_scan_fp,id_scan_fn=[ids_tp_sm[maxpos],ids_tn_sm[maxpos]
 
 
 #delete previous scans because each time it changes
-"""
+
 import os
 import glob
 #save saliency maps of individual scans
@@ -478,7 +479,10 @@ general_scans=[tp,tn,fp,fn]
 general_names=['tp','tn','fp','fn']
 general_ids=[id_scan_tp,id_scan_tn,id_scan_fp,id_scan_fn]
 for i in range(4):
-    path='saliency maps test/{}'.format(general_names[i])
+    path=f'{out_dir}/saliency_maps/{general_names[i]}'
+    if not os.path.exists(path):
+        os.makedirs(path)
+
     for filename in os.listdir(path):
         f = os.path.join(path, filename)
         os.remove(f)
@@ -487,13 +491,14 @@ for i in range(4):
         id_exemple=general_ids[i][j]
         id_value=str(id_exemple[:-2])
         if id_exemple[-1]=='r':
-            scan_ex = nib.load(path_scans_test+id_value+'/Eye_n4_{}_T2FastSat_crop_Right.nii'.format(id_value,))
+            scan_ex = nib.load(path_scans_test+'/'+id_value+'/Eye_1_n4_{}_T2FastSat_crop_Right.nii'.format(id_value,))
         else:
-            scan_ex = nib.load(path_scans_test+id_value+'/Eye_n4_{}_T2FastSat_crop_Left_flipped.nii'.format(id_value,))
+            scan_ex = nib.load(path_scans_test+'/'+id_value+'/Eye_1_n4_{}_T2FastSat_crop_Left_flipped.nii'.format(id_value,))
 
         img=nib.Nifti1Image(general_scans[i][j].numpy().squeeze(),scan_ex.affine,scan_ex.header)
-        nib.save(img,'saliency maps test/{}/{}.nii.gz'.format(general_names[i],str(general_ids[i][j])+'_smap'))
-"""
+        # nib.save(img,'saliency maps test/{}/{}.nii.gz'.format(general_names[i],str(general_ids[i][j])+'_smap'))
+        nib.save(img, f'{path}/{general_ids[i][j]}_smap.nii.gz')
+
 
 ###################
 ## FINAL METRICS ##
