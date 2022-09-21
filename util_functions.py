@@ -48,8 +48,6 @@ def process_scan(path, filename):
         volume_list.append(volume)
     return volume_list
 
-
-
 def process_scan_old(path):
     """Read and resize volume"""
     # Read scan

@@ -17,13 +17,15 @@ import random
 
 from util_functions import process_scan
 
-path_scans='/mnt/Bessel/Gproj/Gerard_DATA/FAT-SAT/TRIO'
-path_excel='/mnt/Bessel/Gproj/Gerard_DATA/FAT-SAT/new_lesion2.xlsx'
+path_scans=''
+path_excel=''
 
-path_scans_test='/mnt/Bessel/Gproj/Gerard_DATA/FAT-SAT/PRISMA'
-path_excel_test='/mnt/Bessel/Gproj/Gerard_DATA/FAT-SAT/test_labels_rovira.ods'
+path_scans_test=''
+path_excel_test=''
 
-out_dir = "/mnt/Bessel/Gproj/Gerard_DATA/FAT-SAT/PRISMA_results_rovira"
+out_dir = ""
+
+
 if not os.path.exists(out_dir):
     os.makedirs(out_dir)
 

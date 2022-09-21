@@ -1,3 +1,7 @@
+## Credit: 
+# 
+# 
+
 from inspect import stack
 import numpy as np
 import tensorflow as tf
@@ -21,15 +25,15 @@ from sklearn.metrics import balanced_accuracy_score
 
 from util_functions import process_scan
 
-path_scans='/mnt/Bessel/Gproj/Gerard_DATA/FAT-SAT/TRIO'
-path_excel='/mnt/Bessel/Gproj/Gerard_DATA/FAT-SAT/new_lesion2.xlsx'
+path_scans=''
+path_excel=''
 
-path_scans_test='/mnt/Bessel/Gproj/Gerard_DATA/FAT-SAT/PRISMA'
-path_excel_test='/mnt/Bessel/Gproj/Gerard_DATA/FAT-SAT/test_labels_rovira.ods'
+path_scans_test=''
+path_excel_test=''
 
 # type of model
 model_name = "SVM" # Either SVM or RF
-out_dir = f"/mnt/Bessel/Gproj/Gerard_DATA/FAT-SAT/{model_name}_perm_results_rovira"
+out_dir = f""
 if not os.path.exists(out_dir):
     os.makedirs(out_dir)
 

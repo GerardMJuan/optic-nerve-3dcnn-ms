@@ -1,21 +1,16 @@
 #!/bin/sh
+## AUTHOR: Aran Garcia-Vidal
+
+# Name of project folder
+Projecte=FAT_SAT
 
 
-# ------------ Canviar aquesta linia pel projecte en concret ----------------
-# Exemple --> Projecte=MS-PATHS
-Projecte=FAST_SAT
-
-# -------------Canviar aquesta linia pel FINAL de la imatge a corregir-------
-#--------------Hauria de tenir l'aspecte següent-----------------------------
-#--------------sub-1-PatId-ses-Id-MPRAGE.nii.gz------------------------------
-# Exemple --> Imatge=MPRAGE.nii.gz
-# Imatge=t2_tse_fs_cor_384_BILAT_3mm
-
-# -------------Canviar aquesta linia per l'extensió de la imatge a corregir--
-#Exemple --> Ext=nii.gz
+#Extension of images
 Ext=nii.gz
 
+# Directory where the scripts will run
 RunDir=/mnt/DADES/Gerard/RunNas
+
 if [ ! -d $RunDir ]
 then
   mkdir $RunDir
@@ -24,7 +19,7 @@ fi
 export PYTHONNOUSERSITE=True
 
 # path to the images
-NiftisPostProc=/mnt/Bessel/Gproj/Gerard_DATA/FAT-SAT
+NiftisPostProc=/mnt/Bessel/Gproj/Gerard_DATA/$Projecte
 
 curr_dir=$PWD
 

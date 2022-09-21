@@ -21,8 +21,8 @@ import os
 #### paths ###
 ###################
 
-path_scans='/mnt/Bessel/Gproj/Gerard_DATA/FAT-SAT/TRIO'
-path_excel='/mnt/Bessel/Gproj/Gerard_DATA/FAT-SAT/new_lesion2.xlsx'
+path_scans=''
+path_excel=''
 
 ###################
 #### read excel ###
@@ -81,8 +81,7 @@ for infile in tqdm(listdir(path_scans)):
 
 # type of model
 model_name = "SVM" # Either SVM or RF
-out_dir = "/mnt/Bessel/Gproj/Gerard_DATA/FAT-SAT/results"
-out_dir = "/mnt/Bessel/Gproj/Gerard_DATA/FAT-SAT/ALEX_base_results"
+out_dir = ""
 
 if not os.path.exists(out_dir):
     os.makedirs(out_dir)

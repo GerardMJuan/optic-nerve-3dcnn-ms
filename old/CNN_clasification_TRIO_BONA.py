@@ -1,3 +1,5 @@
+## Author: Marcos Frías
+
 import numpy as np
 import tensorflow as tf
 import nibabel as nib

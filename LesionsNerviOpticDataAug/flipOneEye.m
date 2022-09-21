@@ -1,3 +1,6 @@
+%% AUTHOR: Aran Garcia-Vidal
+
+
 function flipOneEye(RightImage, LeftImage)
 
 % ImageName = ImageName(1 : end - 4);

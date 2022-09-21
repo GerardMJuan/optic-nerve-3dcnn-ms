@@ -13,9 +13,15 @@ The method shows robustness and, when using only a single imaging sequence, its 
 ![Graphical abstract](graphical.png)
 
 ## Repository organization:
-(TODO)
 
+* **LesionNerviOpticDataAug/:** Code in bash and MATLAB containing the script to segment and extract patches around the optic nerve for a FAT-SAT scan.
+* **old/:** Old, legacy code, preserved this way to suboptimal github organization. Contains old versions of the code which can be useful to directly compare to the current one.
+* **cm_auc_creation.ipynb:** Jupyter script to generate figures for the paper from the results.
+* **CNN_hyperparamsearch_TRIO.py:** Script for doing an hyperparameter search to select best hyperparameters with the training dataset (D1).
+* **CNN_clasification_PRISMA_BONA.py:** Script for testing on the separate dataset (D2). Shares a lot of code with CNN_hyperparamsearch_TRIO.py 
+* **SVM_val.py and SVM_test.py:** Scripts to train and test models for the SVM and RF algorithms described in the paper.
+* **util_functions.py:** contains functions used across the papers.
 
 ## Credits
-* Marcos Frías for the though, implementation and design of the experimental procedure, neural network architecture and evaluation.
-* Aran Garcia-Vidal for the optic nerve lesion crop
+* **Marcos Frías**, for the implementation and design of the experimental procedure, neural network architecture and evaluation.
+* **Aran Garcia-Vidal**, for the optic nerve lesion crop script and graphical interface.

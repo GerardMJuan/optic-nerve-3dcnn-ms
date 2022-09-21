@@ -1,3 +1,5 @@
+%% AUTHOR: Aran Garcia-Vidal
+
 function CreateBoxFromOpticNerveNoEye(Path, ImatgeCropejada, LabelDeLaImatgeCorresponent)
 
 label = niftiread(strcat(Path, '/', LabelDeLaImatgeCorresponent));

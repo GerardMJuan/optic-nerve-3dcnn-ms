@@ -3,19 +3,11 @@
 # and it just needs to run the modificed
 # CreateBoxFromOpticNerveNoEye 
 # to create the data augmentation scans.
+## AUTHOR: Aran Garcia-Vidal
 
-# ------------ Canviar aquesta linia pel projecte en concret ----------------
-# Exemple --> Projecte=MS-PATHS
-Projecte=FAST_SAT
+# Project
+Projecte=FAT_SAT
 
-# -------------Canviar aquesta linia pel FINAL de la imatge a corregir-------
-#--------------Hauria de tenir l'aspecte següent-----------------------------
-#--------------sub-1-PatId-ses-Id-MPRAGE.nii.gz------------------------------
-# Exemple --> Imatge=MPRAGE.nii.gz
-# Imatge=t2_tse_fs_cor_384_BILAT_3mm
-
-# -------------Canviar aquesta linia per l'extensió de la imatge a corregir--
-#Exemple --> Ext=nii.gz
 Ext=nii.gz
 
 RunDir=/home/extop/GERARD/RunNas
@@ -27,7 +19,7 @@ fi
 export PYTHONNOUSERSITE=True
 
 # path to the images
-NiftisPostProc=/mnt/Bessel/Gproj/Gerard_DATA/FAT-SAT/PRISMA
+NiftisPostProc=/mnt/Bessel/Gproj/Gerard_DATA/$Projecte/PRISMA
 
 curr_dir=$PWD
 

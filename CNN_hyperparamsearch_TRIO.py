@@ -19,9 +19,9 @@ from itertools import product
 
 from util_functions import process_scan
 
-path_scans='/mnt/Bessel/Gproj/Gerard_DATA/FAT-SAT/TRIO'
-path_excel='/mnt/Bessel/Gproj/Gerard_DATA/FAT-SAT/new_lesion2.xlsx'
-out_dir = "/mnt/Bessel/Gproj/Gerard_DATA/FAT-SAT/TRIO_results"
+path_scans=''
+path_excel=''
+out_dir = ""
 
 def train_preprocessing(volume, label):
     volume = tf.expand_dims(volume, axis=3)
